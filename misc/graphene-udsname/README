@@ -1,0 +1,11 @@
+Graphene maps UNIX domain sockets to an alternative namespace.  In particular,
+the UNIX domain socket path is hashed, and the resulting path is 'abstract'
+(begins with a nul byte), and has the form:
+
+    snprintf("%s%08x", pal_sec.pipe_prefix, pipeid)
+
+where pipe_prefix is the empty string by default, and pipeid is the pathname
+hash.  I think that pipe_prefix is probably used to group family's of libOS
+processes.
+
+The hashing function is not familiar to me.
