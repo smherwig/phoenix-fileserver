@@ -16,8 +16,6 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
-
-
 # PBKDF2 (Password Based Key Derivation Function 2) / PBKDF2HMAC
 #
 #   #include <openssl/evp.h>
@@ -126,7 +124,13 @@ def pread(f, count):
     f.seek(pos, 0)
     return data
 
-def encrypt_block(key, iv, blk):
+def aes_256_xts_encrypt_block(key, iv, blk):
+    cipher = Cipher(algorithms.AES(key), modes.XTS(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+    ct = encryptor.update(blk) + encryptor.finalize()
+    return ct
+
+def aes_256_cbc_encrypt_block(key, iv, blk):
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     encryptor = cipher.encryptor()
     ct = encryptor.update(blk) + encryptor.finalize()
@@ -142,9 +146,15 @@ def encrypt_block(key, iv, blk):
 # The first 1024 bytes are empty/unused
 # The next 1024 bytes are the superblock
 #
-def encrypt_image(image, key, blksize):
-    debug('encrypting %s (key %s, blksize=%d)',
-            image, binascii.hexlify(key), blksize)
+def encrypt_image(image, cipher, key, blksize):
+    debug('encrypting %s with %s (key %s, blksize=%d)',
+            image, cipher, binascii.hexlify(key), blksize)
+
+    if cipher == 'aes-256-xts':
+        encrypt_block = aes_256_xts_encrypt_block
+    elif cipher == 'aes-256-cbc':
+        encrypt_block = aes_256_cbc_encrypt_block
+
     f = open(image, 'r+b')
     # seek past superblock
     #f.seek(2048)
@@ -152,7 +162,7 @@ def encrypt_image(image, key, blksize):
     blknum = 0
     while blk:
         iv = struct.pack('<I12x', blknum)
-        if blknum < 10:
+        if blknum % 1000 == 0:
             debug("blk_id %d (filepos=%d) iv=%s", blknum, f.tell(), binascii.hexlify(iv))
         ct = encrypt_block(key, iv, blk)
         f.write(ct)
@@ -210,6 +220,11 @@ makefs.py [options] IMAGE DIRECTORY
     -b, --block-size BLOCK_SIZE
         block size: 1024, 2048, 4096 (default 1024)    
 
+    -c, --cipher CIPHER
+        For encrypted images, the cipher to use.
+        The cipher must be either aes-256-cbc or aes-256-xts.
+        Must specify a password via the --password flag.
+
     -h, --help
         Show this help message and exit
 
@@ -225,7 +240,8 @@ makefs.py [options] IMAGE DIRECTORY
 
     -p, --password PASSWORD
         Indicates that IMAGE should be encrypted.  Must
-        not be used with the --keep-mounted option.
+        not be used with the --keep-mounted option.  If a cipher
+        is not specified via the --cipher flag, defaults to aes-256-xts.
 
     -s, --size IMAGE_SIZE
         The image size, as an integer.  One of the followig suffixes
@@ -249,9 +265,9 @@ def usage(exit_code):
     os._exit(exit_code)
 
 def main(argv):
-    shortopts ='b:hkl:p:s:t:v'
-    longopts = ['block-size=', 'help', 'keep-mounted', 'lwext4-mkfs=',
-            'password=', 'size=', 'type=', 'verbose']
+    shortopts ='b:c:hkl:p:s:t:v'
+    longopts = ['block-size=', 'cipher=', 'help', 'keep-mounted', 
+            'lwext4-mkfs=', 'password=', 'size=', 'type=', 'verbose']
     # options
     global verbose
     global keep_mounted
@@ -260,12 +276,14 @@ def main(argv):
     ext = 2
     size = 1
     size_unit = 'G'
+    cipher = None
     password = None
     # args
     image = None
     directory = None
     # other
     global mountpoint
+    keylen = None
 
     atexit.register(cleanup)
 
@@ -278,6 +296,11 @@ def main(argv):
     for o, a in opts:
         if o in ('-b', '--block-size'):
             block_size = parse_int(a, '--block-size', (1024, 2048, 4096))
+        elif o in ('-c', '--cipher'):
+            cipher = a.lower()
+            if cipher not in ('aes-256-cbc', 'aes-256-xts'):
+                usage(1)
+
         elif o in ('-h', '--help'):
             usage(0)
         elif o in ('-k', '--keep-mounted'):
@@ -301,6 +324,18 @@ def main(argv):
     if keep_mounted and password:
         usage(1)
 
+    if cipher and not password:
+        usage(1)
+
+    if cipher == 'aes-256-xts':
+        keylen = 64
+    elif cipher == 'aes-256-cbc':
+        keylen = 32
+
+    if password and not cipher:
+        cipher = 'aes-256-xts'
+        keylen = 64
+
     image = os.path.abspath(args[0])
     directory = os.path.abspath(args[1])
 
@@ -313,14 +348,14 @@ def main(argv):
 
     if password:
         kdf = PBKDF2HMAC(algorithm=hashes.SHA256(),
-                length=32,
+                length=keylen,
                 salt=b'',
                 iterations=1000,
                 backend=default_backend())
         key = kdf.derive(password)
         debug('key derived from password: %s', binascii.hexlify(key))
         unmount(mountpoint)
-        encrypt_image(image, key, block_size)
+        encrypt_image(image, cipher, key, block_size)
 
 if __name__ == '__main__':
     main(sys.argv)
