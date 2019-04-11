@@ -40,6 +40,8 @@ struct nextfs_bdconf {
     uint8_t bd_roothash[32]; /* bdverity, bdvericrypt (as bytes, not hexstr)*/
 
     char *bd_encpassword;    /* bdcrypt, bdvericrypt */
+    /* must be either RHO_CIPHER_AES_256_XTS or RHO_CIPHER_AES_256_CBC */
+    enum rho_cipher_type bd_cipher;
 };
 
 struct nextfs_server {
@@ -2424,11 +2426,12 @@ nextfs_server_open_block_device(struct nextfs_server *server,
         bdp = bdverity_init(bdconf->bd_imagepath, bdconf->bd_mtpath,
                 bdconf->bd_macpassword, bdconf->bd_roothash);
     else if (rho_str_equal(bdconf->bd_name, BDCRYPT_NAME))
-        bdp = bdcrypt_init(bdconf->bd_imagepath, bdconf->bd_encpassword);
+        bdp = bdcrypt_init(bdconf->bd_imagepath, bdconf->bd_encpassword,
+                bdconf->bd_cipher);
     else if (rho_str_equal(bdconf->bd_name, BDVERICRYPT_NAME))
         bdp = bdvericrypt_init(bdconf->bd_imagepath, bdconf->bd_mtpath,
                 bdconf->bd_macpassword, bdconf->bd_roothash, 
-                bdconf->bd_encpassword);
+                bdconf->bd_encpassword, bdconf->bd_cipher);
     else
         rho_die("unknown block device name '%s'\n", bdconf->bd_name);
 
@@ -2532,17 +2535,29 @@ nextfs_bdconf_parse(const char *s)
         bdconf->bd_macpassword = rhoL_strdup(toks[2]);
         rho_binascii_unhexlify(toks[3], strlen(toks[3]), bdconf->bd_roothash);
     } else if (rho_str_equal(bdconf->bd_name, BDCRYPT_NAME)) {
-        if (n != 2)
-            rho_die("block device \"%s\" requires ENCPASSWORD", BDCRYPT_NAME);
+        if (n != 3)
+            rho_die("block device \"%s\" requires ENCPASSWORD:CIPHER", BDCRYPT_NAME);
         bdconf->bd_encpassword = rhoL_strdup(toks[1]);
+        if (rho_str_equal_ci(toks[2], "aes-256-xts"))
+            bdconf->bd_cipher = RHO_CIPHER_AES_256_XTS;
+        else if (rho_str_equal_ci(toks[2], "aes-256-cbc"))
+            bdconf->bd_cipher = RHO_CIPHER_AES_256_CBC;
+        else
+            rho_die("invalid cipher for %s: \"%s\"", BDCRYPT_NAME, toks[2]);
     } else if (rho_str_equal(bdconf->bd_name, BDVERICRYPT_NAME)) {
-        if (n != 5)
-            rho_die("block device \"%s\" requires MERKELFILE:MACPASSWORD:ROOTHASH:ENCPASSWORD",
+        if (n != 6)
+            rho_die("block device \"%s\" requires MERKELFILE:MACPASSWORD:ROOTHASH:ENCPASSWORD:CIPHER",
                     BDVERICRYPT_NAME);
         bdconf->bd_mtpath = rhoL_strdup(toks[1]);
         bdconf->bd_macpassword = rhoL_strdup(toks[2]);
         rho_binascii_unhexlify(toks[3], strlen(toks[3]), bdconf->bd_roothash);
         bdconf->bd_encpassword = rhoL_strdup(toks[4]);
+        if (rho_str_equal_ci(toks[5], "aes-256-xts"))
+            bdconf->bd_cipher = RHO_CIPHER_AES_256_XTS;
+        else if (rho_str_equal_ci(toks[5], "aes-256-cbc"))
+            bdconf->bd_cipher = RHO_CIPHER_AES_256_CBC;
+        else
+            rho_die("invalid cipher for %s: \"%s\"", BDVERICRYPT_NAME, toks[5]);
     }
 
     rho_str_array_destroy(toks);
@@ -2629,11 +2644,13 @@ nextfs_log_init(const char *logfile, bool verbose)
     "               for the Merkle tree nodes are derived from MACPASSWORD.\n" \
     "               ROOTHASH is the root node of the tree, as a hex-string.\n" \
     "\n" \
-    "           - bdcrypt:ENCPASSWORD\n" \
+    "           - bdcrypt:ENCPASSWORD:CIPHER\n" \
     "               Encrypted file block device.\n" \
     "               ENCPASSWORD is the password used to encrypt the fs image\n" \
+    "               CIPHER is the encryption algorithm to use, and must be \n" \
+    "               either aes-256-xts or aes-256-cbc\n" \
     "\n" \
-    "           - bdvericrypt:MERKELFILE:MACPASSWORD:ROOTHASH:ENCPASSWORD\n" \
+    "           - bdvericrypt:MERKELFILE:MACPASSWORD:ROOTHASH:ENCPASSWORD:CIPHER\n" \
     "               Verified and encrypted file block device.\n" \
     "               The arguments are the union of those for bdverity and\n" \
     "               and bdcrypt.\n" \
