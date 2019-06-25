@@ -1,0 +1,19 @@
+diff --git a/backend.c b/backend.c
+index 2f46329..54b6481 100644
+--- a/backend.c
++++ b/backend.c
+@@ -1722,11 +1722,14 @@ static void *thread_main(void *data)
+ 	if (o->cgroup && cgroup_setup(td, cgroup_list, &cgroup_mnt))
+ 		goto err;
+ 
++#if 0
++    // SMHERWIG
+ 	errno = 0;
+ 	if (nice(o->nice) == -1 && errno != 0) {
+ 		td_verror(td, errno, "nice");
+ 		goto err;
+ 	}
++#endif
+ 
+ 	if (o->ioscheduler && switch_ioscheduler(td))
+ 		goto err;

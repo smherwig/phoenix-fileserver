@@ -1,0 +1,111 @@
+Version
+=======
+I use Fio 3.13 from:
+
+    https://github.com/axboe/fio
+
+Specifically, I used the master branch, with commit:
+	(note that this is the first commit after the Fio 3.13 tagged
+   	version).
+
+   	commit 2f75f022393e432210d01b15088f425ee5260340
+	Author: Jeff Furlong <jeff.furlong@wdc.com>
+	Date:   Fri Feb 8 16:33:34 2019 -0700
+
+    client/server: inflate error handling
+    
+    Occasionally fio client/server with zlib enabled may report:
+    
+    fio: inflate error -5
+    fio: failed decompressing log
+    fio: failed converting IO log
+    
+    The error -5 is a Z_BUF_ERROR, and references are available at
+    https://zlib.net/zlib_how.html and https://www.zlib.net/manual.html  It
+    seems that when decompressing the buffer, if the buffer chunk is the
+    same size as remaining data in the buffer, the Z_BUF_ERROR can safely be
+    ignored.  So one idea is to ignore the safe errors noting the zlib
+    references:
+    
+    "inflate() can also return Z_STREAM_ERROR, which should not be possible
+    here, but could be checked for as noted above for def(). Z_BUF_ERROR
+    does not need to be checked for here, for the same reasons noted for
+    def(). Z_STREAM_END will be checked for later.
+    
+            ret = inflate(&strm, Z_NO_FLUSH);
+            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+            switch (ret) {
+            case Z_NEED_DICT:
+                ret = Z_DATA_ERROR;     /* and fall through */
+            case Z_DATA_ERROR:
+            case Z_MEM_ERROR:
+                (void)inflateEnd(&strm);
+                return ret;
+            }
+    
+    ...
+    
+    The way we tell that deflate() has no more output is by seeing that it
+    did not fill the output buffer, leaving avail_out greater than zero.
+    However suppose that deflate() has no more output, but just so happened
+    to exactly fill the output buffer! avail_out is zero, and we can't tell
+    that deflate() has done all it can. As far as we know, deflate() has
+    more output for us. So we call it again. But now deflate() produces no
+    output at all, and avail_out remains unchanged as CHUNK. That deflate()
+    call wasn't able to do anything, either consume input or produce output,
+    and so it returns Z_BUF_ERROR. (See, I told you I'd cover this later.)
+    However this is not a problem at all. Now we finally have the desired
+    indication that deflate() is really done, and so we drop out of the
+    inner loop to provide more input to deflate()."
+    seems that when decompressing the buffer, if the buffer chunk is the
+    same size as remaining data in the buffer, the Z_BUF_ERROR can safely be
+    ignored.  So one idea is to ignore the safe errors noting the zlib
+    references:
+    
+    "inflate() can also return Z_STREAM_ERROR, which should not be possible
+    here, but could be checked for as noted above for def(). Z_BUF_ERROR
+    does not need to be checked for here, for the same reasons noted for
+    def(). Z_STREAM_END will be checked for later.
+    
+            ret = inflate(&strm, Z_NO_FLUSH);
+            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+            switch (ret) {
+            case Z_NEED_DICT:
+                ret = Z_DATA_ERROR;     /* and fall through */
+            case Z_DATA_ERROR:
+            case Z_MEM_ERROR:
+                (void)inflateEnd(&strm);
+                return ret;
+            }
+    
+    ...
+    
+    The way we tell that deflate() has no more output is by seeing that it
+    did not fill the output buffer, leaving avail_out greater than zero.
+    However suppose that deflate() has no more output, but just so happened
+    to exactly fill the output buffer! avail_out is zero, and we can't tell
+    that deflate() has done all it can. As far as we know, deflate() has
+    more output for us. So we call it again. But now deflate() produces no
+    output at all, and avail_out remains unchanged as CHUNK. That deflate()
+    call wasn't able to do anything, either consume input or produce output,
+    and so it returns Z_BUF_ERROR. (See, I told you I'd cover this later.)
+    However this is not a problem at all. Now we finally have the desired
+    indication that deflate() is really done, and so we drop out of the
+    inner loop to provide more input to deflate()."
+    
+    Signed-off-by: Jens Axboe <axboe@kernel.dk>
+ 
+
+Patch
+=====
+I patched backend.c to comment out the call to nice(); nice is a wrapper for
+the setpriority syscall, which Graphene does not implement (specifically,
+Graphene will return ENOSYS).  This causes fio to abort before it even gets to
+perform the benchmark test.
+
+To apply the patch,
+   
+   cd fio/
+   cp .../fio-3.13.patch
+   patch -p1 --dry-run < fio-3.13.patch
+   patch -p1 < fio-3.13.patch
