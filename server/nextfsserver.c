@@ -1579,7 +1579,6 @@ done:
     rpc_agent_new_msg(agent, error);
     if (!error) {
         rpc_agent_set_bodylen(agent, 40);
-        fprintf(stderr, "ret_ino=%"PRIu32"\n", ret_ino);
         rho_buf_writeu32be(buf, ret_ino);
         rho_buf_writeu16be(buf, inode.mode);
         rho_buf_writeu16be(buf, inode.uid);

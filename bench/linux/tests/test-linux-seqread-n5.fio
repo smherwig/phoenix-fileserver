@@ -1,0 +1,7 @@
+[global]
+include linux-global.fio
+
+[linux-seqread-n5]
+rw=read
+numjobs=5
+group_reporting=1

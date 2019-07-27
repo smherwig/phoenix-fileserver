@@ -1,0 +1,8 @@
+[global]
+include linux-global.fio
+
+[linux-seqread-n1]
+rw=read
+numjobs=1
+write_lat_log=lat-linux-seqread-n1
+

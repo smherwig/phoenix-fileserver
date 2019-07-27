@@ -119,7 +119,7 @@ main(int argc, char *argv[])
 	HASHTYPE h = 0;
 
     if (argc != 2) {
-        fprintf(stderr, "usage: %s USDPATH\n", argv[0]);
+        fprintf(stderr, "usage: %s UDSPATH\n", argv[0]);
         exit(1);
     }
 

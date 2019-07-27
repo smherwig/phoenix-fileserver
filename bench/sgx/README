@@ -1,0 +1,4 @@
+bdcrypt
+-------
+./fio.manifest.sgx /tests/test-graphene-seqread-n1.fio
+    --output /results/sgx-bdcrypt-xts-seqread-n1.out

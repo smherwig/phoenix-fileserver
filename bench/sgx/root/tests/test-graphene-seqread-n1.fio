@@ -1,0 +1,7 @@
+[global]
+include /tests/graphene-global.fio
+
+[graphene-seqread-n1]
+rw=read
+numjobs=1
+write_lat_log=/results/lat-seqread-n1

@@ -1,0 +1,10 @@
+filename=/fsserver/testfile
+size=16M
+bs=4K
+direct=0
+time_based=1
+runtime=10
+mem=malloc
+clocksource=gettimeofday
+thread=1
+ioengine=sync
