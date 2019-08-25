@@ -1,4 +1,92 @@
-bdcrypt
+/etc/clash
+ if running nextfs outside of an enclave, listen on @/graphene/123456/fc055dcc
+
+
+making bdstd filesystem
+-----------------------
+cd makefs
+./makefs.py -v -b 4096 -l ~/bin/lwext4-mkfs -s 128M -t 2 fs.bdstd.img root
+cp fs.bdstd.img ../deploy/fs/srv/
+
+
+making bdcrypt filesystem
+-------------------------
+cd makefs
+./makefs.py -v -b 4096 -l ~/bin/lwext4-mkfs -s 128M -t 2 \
+        -c aes-256-xts -p encpassword fs.bdstd.img root 
+cp fs.bdcrypt.img ../deploy/fs/srv/
+
+
+making bdverity filesystem
+-------------------------
+# same as bdstd
+cd makefs
+./makefs.py -v -b 4096 -l ~/bin/lwext4-mkfs -s 128M -t 2 fs.bdstd.img root
+./makemerfkle -b 4096 -k macpassword fs.bdstd.img fs.bdstd.mt
+
+cp fs.bdstd.img ../deploy/fs/srv/
+cp fs.bdstd.mt ../deploy/fs/srv/
+008a1f68b87cf0c72b7edb7eec88c287bc9fc3ef145b97d6e17f2b2633c70e1a
+
+making a bdvericrypt filesystem
+-------------------------------
+# same as bdcrypt
+cd makefs
+./makefs.py -v -b 4096 -l ~/bin/lwext4-mkfs -s 128M -t 2 \
+        -c aes-256-xts -p encpassword fs.bdstd.img root 
+./makemerfkle -b 4096 -k macpassword fs.bdcrypt.img fs.bdcrypt.mt
+cp fs.bdcrypt.img ../deploy/fs/srv/
+cp fs.bdcrypt.mt ../deploy/fs/srv/
+6763c90d77151dbc7c5dfe32177c173c6b99aac33a0e6256011a08537583e65f
+
+
+running fsserver outside of an enclave
+--------------------------------------
+
+### bdstd
+cd ../server
+./nextfsserver -b bdstd -Z ../keys/root.crt ../keys/proc.crt ../keys/proc.key \
+        -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.bdstd.img
+
+### bdcrypt
+cd ../server
+./nextfsserver -b bdcrypt:encpassword:aes-256-xts \
+        -Z ../keys/root.crt ../keys/proc.crt ../keys/proc.key \
+        -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.bdcrypt.img
+
+
+### bdverity
+cd ../server
+./nextfsserver \
+        -b bdverity:../deply/fs/srv/fs.bdstd.mt:macpassword:008a1f68b87cf0c72b7edb7eec88c287bc9fc3ef145b97d6e17f2b2633c70e1a
+        -Z ../keys/root.crt ../keys/proc.crt ../keys/proc.key \
+        -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.bdstd.img
+
+## bdvericrypt
+./nextfsserver -b bdvericrypt:../deploy/fs/srv/fs.bdcrypt.mt:macpassword:6763c90d77151dbc7c5dfe32177c173c6b99aac33a0e6256011a08537583e65f:encpassword:aes-256-xts
+-Z ../keys/root.crt ../keys/proc.crt  ../keys/proc.key -a
+/graphene/123456/fc055dcc ../deploy/fs/srv/fs.bdcrypt.img 
+
+
+
+running fsserver inside of an enclave
+--------------------------------------
+./make_sgx.py -g ~/ws/phoenix -k enclave-key.pem \
+        -p ~/phoenix/fileserver/deploy/manifest.conf \
+        -t $PWD -v -o nextfsserver
+cd nextfsserver
+cp manifest.conf nextfsserver.manifest.conf
+./nextfsserver.manifest.conf -b bdstd \
+        -Z /srv/root.crt /srv/proc.crt /srv/proc.key \
+        /etc/clash /srv/fs.bdstd.img
+
+
+
+
+
+
+
+running fio
 -------
 ./fio.manifest.sgx /tests/test-graphene-seqread-n1.fio
-    --output /results/sgx-bdcrypt-xts-seqread-n1.out
+    --output /results/-bdcrypt-xts-seqread-n1-sgx.out

@@ -1574,6 +1574,9 @@ nextfs_raw_inode_proxy(struct nextfs_client *client)
      */
     rho_memzero(&inode, sizeof(inode));
     error = ext4_raw_inode_fill(path, &ret_ino, &inode);
+    rho_log_debug(nextfs_log,
+            "ext4_raw_inode_fill(\"%s\") returned %d, size_lo=%"PRIu32", size_hi=%"PRIu32,
+            path, error, inode.size_lo, inode.size_hi);
 
 done:
     rpc_agent_new_msg(agent, error);
