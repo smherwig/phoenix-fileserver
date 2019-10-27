@@ -218,7 +218,7 @@ makefs.py [options] IMAGE DIRECTORY
 
   options:
     -b, --block-size BLOCK_SIZE
-        block size: 1024, 2048, 4096 (default 1024)    
+        block size: 1024, 2048, 4096 (default 4096)    
 
     -c, --cipher CIPHER
         For encrypted images, the cipher to use.
@@ -272,7 +272,7 @@ def main(argv):
     global verbose
     global keep_mounted
     lwext4_mkfs = 'lwext4-mkfs'
-    block_size = 1024
+    block_size = 4096
     ext = 2
     size = 1
     size_unit = 'G'
