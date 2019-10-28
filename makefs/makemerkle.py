@@ -63,7 +63,7 @@ makemerkle.py [options] INPUT_FILE OUTPUT_FILE
         The default is sha256. 
 
     -b, --block-size BLOCK_SIZE
-        Default is 1024 bytes.
+        Default is 4096 bytes.
 
     -h, --help
         Show this help message and exit.
@@ -208,7 +208,7 @@ def main(argv):
     longopts = ['hash-algorithm=', 'block-size=', 'help', 'hmac-key=', 'verbose']
     # options
     global verbose
-    block_size = 1024
+    block_size = 4096
     algorithm = 'sha256'
     hmac_key = None
     # args
