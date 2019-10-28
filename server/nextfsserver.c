@@ -477,7 +477,8 @@ nextfs_fdtable_copy(const struct nextfs_fdtable *fdtab)
     n = rho_bitmap_size(fdtab->ft_map);
     newp->ft_openfiles = rhoL_mallocarray(n, sizeof(struct nextfs_file *), 0);
 
-    RHO_BITMAP_FOREACH(fd, bitval, fdtab->ft_map) {
+    for (fd = 0; fd < n; fd++) {
+        bitval = rho_bitmap_get(fdtab->ft_map, fd);
         if (bitval == 0)
             continue;
         fp = fdtab->ft_openfiles[fd];
@@ -497,7 +498,8 @@ nextfs_fdtable_destroy(struct nextfs_fdtable *fdtab)
 
     RHO_TRACE_ENTER();
 
-    RHO_BITMAP_FOREACH(fd, bitval, fdtab->ft_map) {
+    for (fd = 0; fd < rho_bitmap_size(fdtab->ft_map); fd++) {
+        bitval = rho_bitmap_get(fdtab->ft_map, fd);
         if (bitval == 0)
             continue;
         nextfs_file_close(fdtab, fd);
