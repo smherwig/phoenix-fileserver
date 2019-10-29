@@ -1,7 +1,0 @@
-[global]
-include linux-global.fio
-
-[linux-seqread-n3]
-rw=read
-numjobs=3
-group_reporting=1

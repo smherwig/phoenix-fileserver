@@ -1,7 +1,0 @@
-[global]
-include linux-global.fio
-
-[linux-seqread-n8]
-rw=read
-numjobs=8
-group_reporting=1
