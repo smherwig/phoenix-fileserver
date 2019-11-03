@@ -23,7 +23,7 @@ I will assume that sources are downloaded to `$HOME/src/` and that artifacts
 are installed under `$HOME`.  
 
 First download and install lwext4.  I have a
-[fork](https://github.com/smherwig/lwext4) of gkostka's lwext4 that simply adds
+[fork](https://github.com/smherwig/lwext4) of gkostka's lwext4 that adds
 a `Makefile.smherwig` for the purpose of simplifying installation.
 
 ```
@@ -79,29 +79,30 @@ pip install cryptography
 ```
 
 
-Creating a bd-std image
------------------------
+bd-std image
+------------
 
 ```
 cd ~/src/fileserver/makefs
 ./makefs.py -v -s 128M fs.std.img root
 ```
 
-Creating a bd-crypt image
--------------------------
+bd-crypt image
+--------------
 
 ```
-cd ~/src/fileserver/makefs ./makefs.py -v -s 128M -p encpassword fs.crypt.img root
+cd ~/src/fileserver/makefs
+./makefs.py -v -s 128M -p encpassword fs.crypt.img root
 ```
 
 Here, `encpassword` is the password used to generate the encryption key.
 
 
-Creating a bd-verity or bd-vericrypt image
-------------------------------------------
+bd-verity and bd-vericrypt images
+---------------------------------
 
 The script `src/fileserver/makefs/makemerkle.py` takes as an argument the
-filesystem image, computes the Merkle Tree of the image, and outputs a
+filesystem image, computes the Merkle tree of the image, and outputs a
 serialized representation of the tree to a file.
 
 
@@ -113,10 +114,11 @@ image:
 ```
 
 Here, `macpassword` is the key used for the Merkle tree's HMAC, and `fs.std.mt`
-is the Merkle Tree output file.
+the Merkle Tree output file.
 
 
-Similarly, bd-vericrypt block device entails computing the merkle tree of a bd-crypt filesystem image:
+Similarly, a bd-vericrypt block device entails computing the Merkle tree of a
+bd-crypt filesystem image:
 
 ```
 ./makemerkle.py -k macpassword fs.crypt.img fs.crypt.mt
@@ -125,11 +127,22 @@ Similarly, bd-vericrypt block device entails computing the merkle tree of a bd-c
 
 Micro-Benchmarks
 ================
-Build and install the [fio](https://github.com/axboe/fio).  We apply a small
-patch to `fio` that removes a call to `nice(3)`.  `nice(3)` is a C library call
-wrapper for the system call `setpriority`, which Grpahene does not implement
-(that is, Graphene will return `ENOSYS`).  If we do not apply this patch, `fio`
-will abort upon insepcting the return value of `nice`.
+
+The micro-benchmarks require the [phoenix](https://github.com/smherwig/phoenix)
+libOS and
+[phoenix-makemanifest](https://github.com/smherwig/phoenix-makemanifest)
+configuration packager. Download and setup these two projects.  The
+instructions here assume that the phoenix source is located at
+`$HOME/src/phoenix` and the phoenix-makemanifest project at
+`$HOME/src/makemanifest`.
+
+
+Build and install the [fio](https://github.com/axboe/fio) I/O workload
+benchmarking tool.  We apply a small patch to `fio` that removes a call to
+`nice(3)`.  `nice(3)` is a C library wrapper for the system call
+`setpriority`, which Graphene does not implement (that is, Graphene will return
+`ENOSYS`).  If we do not apply this patch, `fio` will abort upon
+inspecting the return value of `nice`.
 
 
 ```
@@ -144,9 +157,94 @@ make
 make install
 ```
 
-Next, build three different versionf of the file image: a plaintext version
-(bd-std), an encrypted version (bd-crypt), and an encryted and Merkle-tree
-protecteimed image (bd-vericrypt)
+We use `fio` to measure the performance of sequential reads to a 16 MiB file
+hosted on a nextfs server over 10 seconds; each read transfers 4096 bytes of
+data.  `fio` runs inside an exnclave, uses exitless system calls, and invokes
+read operations from a single thread.  Package fio to run in an enclave 
+
+
+```
+cd ~/src/makemanifest
+./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p
+~/src/fileserver/bench/sgx/fio.conf -t $PWD -v -o fio
+cd fio
+mv manifest.sgx fio.manifest.sgx
+```
+
+
+We test the nextfs server running outside of enclave, in an enclave, and in an
+enclave with exitless system calls.  Package nextfs to run in an enclave:
+
+```
+cp ~/src/fileserver/makefs/fs.std.img ~/src/fileserver/deploy/fs/srv
+cd ~/src/makemanifest
+./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p ~/src/fileserver/deploy/manifest.conf -t $PWD -v -o nextfsserver
+cd nextfsserver
+cp manifest.conf nextfsserver.manifest.conf
+```
+
+
+Next, create or copy over the keying material.  I will assume the keying
+material is from the
+[phoenix-nginx-eval](https://github.com/smherwig/phoenix-nginx-eval), but
+OpenSSL may also be used to create a root certificate (`root.crt`) and a leaf
+certificate and key (`proc.crt`, `proc.key`).
+
+```
+cd ~
+git clone https://github.com/smherwig/phoenix-nginx-eval nginx-eval
+cp ~/nginx-eval/config/root.crt ~/src/fileserver/deploy/fs/srv/
+cp ~/nginx-eval/config/proc.crt ~/src/fileserver/deploy/fs/srv/
+cp ~/nginx-eval/config/proc.key ~/src/fileserver/deploy/fs/srv/
+```
+
+
+Copy the filesystem images and Merkle tree files to `deploy/fs/srv/`
+
+```
+cd ~/src/fileserver/makefs
+cp fs.std.img ../deploy/fs/srv
+cp fs.crypt.img ../deploy/fs/srv
+cp fs.crypt.mt ../deploy/fs/srv
+```
+
+non-SGX
+-------
+
+In one terminal, run the nextfsserver:
+
+```
+cd ~/src/fileserver/server
+./nextfsserver -b bdstd -Z ../deploy/fs/srv/root.crt ../deploy/fs/srv/proc.crt ../deploy/fs/srv/proc.key -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.std.img
+```
+
+In another terminal, run the `fio` tool:
+
+```
+cd ~/src/makemanifest/fio
+./fio.manifest.sgx /tests/test-graphene-seqread-n1.fio --output
+/results/graphene-bdstd.out
+```
+
+For bd-crypt, the nextfsserver command-line is:
+
+```
+./nextfsserver -b bdcrypt:encpassword:aes-256-xts -Z ../deploy/fs/srv/root.crt ../deploy/fs/srv/proc.crt ../deploy/fs/srv/proc.key -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.std.img
+```
+
+
+For bd-vericrypt, the nextfsserver command-line is:
+```
+./nextfsserver -b bdvericrypt:../deploy/fs/srv/fs.std.mt:ROOTHASH:encpassword:aes-256-xts -Z ../deploy/fs/srv/root.crt ../deploy/fs/srv/proc.crt ../deploy/fs/srv/proc.key -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.std.img
+```
+
+
+SGX
+---
+
+
+exitless
+--------
 
 
 
