@@ -176,7 +176,7 @@ DEBUG off
 
 The `EXEC` directive is the path to the nextffserver of the executable.  The
 `MOUNT` directives are chroot mounts; Graphene maps these hosts directories
-read-write onto the Graphene's filesystem (e.g., the Graphene usespace sees a
+read-write onto Graphene's filesystem (e.g., the Graphene userspace sees a
 `/srv` directory which is really the untrusted host's
 `/home/smherwig/phoenix/fileserver/deploy/fs/srv` directory).
 `THREADS` indicates the maximum number SGX threads, and whether these threads
@@ -186,19 +186,23 @@ use exitless system calls.
 UNIX Domain Sockets
 ===================
 
-Note that `-a /graphene/123456/fc055dcc` signifies that the server listens on
-the abstract UNIX domain socket `\x00/graphene/123456/fc05dcc` (where abstract
-means that the socket path begins with a nul byte).  
-
 Internally, Graphene namespaces and hashes UNIX domain socket paths.   For
 instance, if a server in the Graphene userspace listens on the UNIX domain
 socket `/etc/clash`, the Graphene kernel and platform abstraction layer (PAL)
-translates this to a UNIX domain socket on the untrusted host named
+translate this to a UNIX domain socket on the untrusted host named
 `/\x00/graphene/123456/fc05dcc`.  The leading `\x00` signifies that the path is
 abstract; `/graphene/123456/` is a hardcoded namespace, and `fc05dcc` is
 Graphene's custom hash of `/etc/clash`.
 
-The executable `graphene-udsname` computes the mapping from path name to hashed
+Admittedly, this can be confusing.  A rule of thumb is that when specifying a
+network host endpoint in `manifest.conf` with the `MOUNT` directive, use the
+decimal hash value (e.g, `4228210124`); when running a server outside of SGX,
+the server should liste on the full host path (e.g.,
+`\x00/graphene/123456/fc05dcc`);  when running a server inside
+of SGX, the server should liste on the Graphene userspace path (eg.,
+`/etc/clash`).
+
+The utility `graphene-udsname` computes the mapping from path name to hashed
 name:
 
 ```
@@ -208,14 +212,6 @@ make
 decimal: 4228210124
 hex....: fc055dcc
 ```
-
-Admittedly, this can be confusing.  A rule of thumb is that when specifying a
-network host endpoint in `manifest.conf` with the `MOUNT` directive, use the
-decimal hash value (e.g, `4228210124`); when running a server outside of SGX,
-the server should liste on the full host path (e.g.,
-`\x00/graphene/123456/fc05dcc`);  when running a server inside
-of SGX, the server should liste on the Graphene userspace path (eg.,
-`/etc/clash`).
 
 
 Micro-Benchmarks
@@ -280,6 +276,9 @@ In one terminal, run the nextfsserver:
 cd ~/src/fileserver/server
 ./nextfsserver -b bdstd -Z ../deploy/fs/srv/root.crt ../deploy/fs/srv/proc.crt ../deploy/fs/srv/proc.key -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.std.img
 ```
+
+Note that `-a /graphene/123456/fc055dcc` signifies that the server listens on
+the abstract UNIX domain socket `\x00/graphene/123456/fc05dcc`.
 
 In another terminal, run the `fio` tool:
 
