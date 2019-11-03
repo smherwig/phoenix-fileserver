@@ -146,23 +146,57 @@ cp ~/nginx-eval/config/proc.crt ~/src/fileserver/deploy/fs/srv/
 cp ~/nginx-eval/config/proc.key ~/src/fileserver/deploy/fs/srv/
 ```
 
-Copy the filesystem images and Merkle tree files to `~src/fileserver/deploy/fs/srv/`
+Copy the relevant filesystem image and Merkle tree file to
+`~src/fileserver/deploy/fs/srv/`.
+
+Package nextffserver to run in an enclave:
 
 ```
-cd ~/src/fileserver/makefs
-cp fs.std.img ../deploy/fs/srv
-cp fs.crypt.img ../deploy/fs/srv
-cp fs.crypt.mt ../deploy/fs/srv
+cd ~/src/makemanifest
+./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p ~/src/fileserver/deploy/manifest.conf -t $PWD -v -o nextfsserver
+cd nextfsserver
+cp manifest.conf nextfsserver.manifest.conf
 ```
+
+The `~src/fileserver/deploy/manifest.conf` looks like:
+
+```
+EXEC file:/home/smherwig/phoenix/fileserver/server/nextfsserver
+
+MOUNT file:/home/smherwig/phoenix/fileserver/deploy/fs/srv /srv chroot rw
+MOUNT file:/home/smherwig/phoenix/fileserver/deploy/fs/etc /etc chroot rw
+
+ENCLAVE_SIZE 128
+
+THREADS 1
+#THREADS 1 exitless
+
+DEBUG off
+```
+
+The `EXEC` directive is the path to the nextffserver of the executable.  The
+`MOUNT` directives are chroot mounts; Graphene maps these hosts directories
+read-write onto the Graphene's filesystem (e.g., the Graphene usespace sees a
+`/srv` directory which is really the untrusted host's
+`/home/smherwig/phoenix/fileserver/deploy/fs/srv` directory).
+`THREADS` indicates the maximum number SGX threads, and whether these threads
+use exitless system calls.
+
+
+UNIX Domain Sockets
+===================
 
 Note that `-a /graphene/123456/fc055dcc` signifies that the server listens on
 the abstract UNIX domain socket `\x00/graphene/123456/fc05dcc` (where abstract
-means that the socket path begins with a nul byte).  Internally, Graphene namespaces and
-hashes UNIX domain socket paths.  Here, `/graphene/123456` is a hardcoded
-namespace, and `fc055dcc` is the hash of `/etc/clash`.  In other words, the
-Graphene userspace sees the path as `/etc/clash`, whereas
-Graphene's kernel maps this name to the untrusted host's `/\x00/graphene/123456/fc05dcc` path.
+means that the socket path begins with a nul byte).  
 
+Internally, Graphene namespaces and hashes UNIX domain socket paths.   For
+instance, if a server in the Graphene userspace listens on the UNIX domain
+socket `/etc/clash`, the Graphene kernel and platform abstraction layer (PAL)
+translates this to a UNIX domain socket on the untrusted host named
+`/\x00/graphene/123456/fc05dcc`.  The leading `\x00` signifies that the path is
+abstract; `/graphene/123456/` is a hardcoded namespace, and `fc05dcc` is
+Graphene's custom hash of `/etc/clash`.
 
 The executable `graphene-udsname` computes the mapping from path name to hashed
 name:
@@ -174,6 +208,14 @@ make
 decimal: 4228210124
 hex....: fc055dcc
 ```
+
+Admittedly, this can be confusing.  A rule of thumb is that when specifying a
+network host endpoint in `manifest.conf` with the `MOUNT` directive, use the
+decimal hash value (e.g, `4228210124`); when running a server outside of SGX,
+the server should liste on the full host path (e.g.,
+`\x00/graphene/123456/fc05dcc`);  when running a server inside
+of SGX, the server should liste on the Graphene userspace path (eg.,
+`/etc/clash`).
 
 
 Micro-Benchmarks
@@ -268,18 +310,13 @@ SGX
 ---
 
 Ensure that `~/src/fileserver/deploy/manifest.conf` has the line `THREADS 1`.
-Next, package nextfsserver to run in an enclave:
+Next, package nextfsserver to run in an enclave.
 
-```
-cd ~/src/makemanifest
-./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p ~/src/fileserver/deploy/manifest.conf -t $PWD -v -o nextfsserver
-cd nextfsserver
-cp manifest.conf nextfsserver.manifest.conf
-```
 
 To run the nextfsserver with bd-std, enter:
 
 ```
+cd ~/src/makemanifest/nextfsserver
 ./nextfsserver.manifest.conf -b bdstd -Z /srv/root.crt /srv/proc.crt /srv/proc.key /etc/clash /srv/fs.std.img
 ```
 
@@ -303,3 +340,16 @@ exitless
 --------
 Ensure that `~/src/fileserver/deploy/manifest.conf` has the line `THREADS 1
 exitless`, and otherwise repeat as for SGX.
+
+
+
+Limitations
+===========
+
+A limitation when using a Merkle-tree enhanced block device (i.e., bd-verity or
+bd-vericrypt) is that the root hash will change during the execution,
+but nextfs does not provide a mechanism for persisting this value.  Thus, if
+the nextfsserver is killed, and then run again, the Merkle tree verification
+will not succeed.
+
+
