@@ -1,11 +1,12 @@
 Overview
 ========
-phoenix-fileserver, also called nextfs, is a userspace fileserver used by the Phoenix SGX
-microkernel.  nextfs extends the
-[lwext4](https://github.com/gkostka/lwext4) userspace implementation of an ext2
-filesystem into a networked server.  nextfs uses an untrusted host file as the
-backing store, similar to a block device, and  implements four variants of this
-device:
+
+phoenix-fileserver, also called nextfs, is a userspace fileserver used by the
+[Phoenix](https://github.com/smherwig/phoenix) SGX microkernel.  nextfs extends
+the [lwext4](https://github.com/gkostka/lwext4) userspace implementation of an
+ext2 filesystem into a networked server.  nextfs uses an untrusted host file as
+the backing store, similar to a block device, and  implements four variants of
+this device:
 
 - **bd-std**: stores data blocks in plaintext, wihtout integrity guarantees
 - **bd-crypt**: encrypts each block using AES-256 in XTS mode; each block's IV
