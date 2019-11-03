@@ -124,9 +124,19 @@ bd-crypt filesystem image:
 ./makemerkle.py -k macpassword fs.crypt.img fs.crypt.mt
 ```
 
+The last line that `./makemerkle.py` outputs is a hexstring of the root hash;
+jot down this hash, as it is passed as a command-line argument to the
+nextfsserver.
+
 
 Micro-Benchmarks
 ================
+
+We use [`fio`](https://github.com/axboe/fio) to measure the performance of
+sequential reads to a 16 MiB file hosted on a nextfsserver over 10 seconds;
+each read transfers 4096 bytes of data.  `fio` runs inside an enclave, uses
+exitless system calls, and invokes read operations from a single thread.  
+
 
 The micro-benchmarks require the [phoenix](https://github.com/smherwig/phoenix)
 libOS and
@@ -136,14 +146,8 @@ instructions here assume that the phoenix source is located at
 `$HOME/src/phoenix` and the phoenix-makemanifest project at
 `$HOME/src/makemanifest`.
 
-
 Build and install the [fio](https://github.com/axboe/fio) I/O workload
-benchmarking tool.  We apply a small patch to `fio` that removes a call to
-`nice(3)`.  `nice(3)` is a C library wrapper for the system call
-`setpriority`, which Graphene does not implement (that is, Graphene will return
-`ENOSYS`).  If we do not apply this patch, `fio` will abort upon
-inspecting the return value of `nice`.
-
+benchmarking tool.  
 
 ```
 cd ~/src
@@ -157,10 +161,13 @@ make
 make install
 ```
 
-We use `fio` to measure the performance of sequential reads to a 16 MiB file
-hosted on a nextfs server over 10 seconds; each read transfers 4096 bytes of
-data.  `fio` runs inside an exnclave, uses exitless system calls, and invokes
-read operations from a single thread.  Package fio to run in an enclave 
+We apply a small patch to `fio` that removes a call to
+`nice(3)`.  `nice(3)` is a C library wrapper for the system call
+`setpriority`, which Graphene does not implement (that is, Graphene will return
+`ENOSYS`).  If we do not apply this patch, `fio` will abort upon
+inspecting the return value of `nice`.
+
+Package fio to run in an enclave 
 
 
 ```
@@ -171,9 +178,8 @@ cd fio
 mv manifest.sgx fio.manifest.sgx
 ```
 
-
-Next, create or copy over the keying material.  I will assume the keying
-material is from the
+Next, create or copy over the keying material.  I assume the keying
+material is from 
 [phoenix-nginx-eval](https://github.com/smherwig/phoenix-nginx-eval), but
 OpenSSL may also be used to create a root certificate (`root.crt`) and a leaf
 certificate and key (`proc.crt`, `proc.key`).
@@ -186,8 +192,7 @@ cp ~/nginx-eval/config/proc.crt ~/src/fileserver/deploy/fs/srv/
 cp ~/nginx-eval/config/proc.key ~/src/fileserver/deploy/fs/srv/
 ```
 
-
-Copy the filesystem images and Merkle tree files to `deploy/fs/srv/`
+Copy the filesystem images and Merkle tree files to `~src/fileserver/deploy/fs/srv/`
 
 ```
 cd ~/src/fileserver/makefs
@@ -196,8 +201,9 @@ cp fs.crypt.img ../deploy/fs/srv
 cp fs.crypt.mt ../deploy/fs/srv
 ```
 
-We test the nextfs server using bd-std, bd-crypt, bd-vericrypt running outside of enclave, in an enclave, and in an
-enclave with exitless system calls.
+We test the nextfsserver using bd-std, bd-crypt, bd-vericrypt running outside
+of enclave (*non-SGX*), in an enclave (*SGX*), and in an enclave with exitless
+system calls (*exitless*)
 
 
 non-SGX
@@ -229,6 +235,29 @@ For bd-vericrypt, the nextfsserver command-line is:
 
 ```
 ./nextfsserver -b bdvericrypt:../deploy/fs/srv/fs.std.mt:ROOTHASH:encpassword:aes-256-xts -Z ../deploy/fs/srv/root.crt ../deploy/fs/srv/proc.crt ../deploy/fs/srv/proc.key -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.std.img
+```
+
+where `ROOTHASH` is the hexstring of the root hash for the Merkle tree.
+
+
+Note that `-a /graphene/123456/fc055dcc` signifies that the server listens on
+the abstract UNIX domain socket `\x00/graphene/123456/fc05dcc' (where abstract
+means that the socket path begins with a nul byte).  Internally, Graphene namespaces and
+hashes UNIX domain socket paths.  Here, `/graphene/123456` is a hardcoded
+namespace, and `fc055dcc` is the hash of `/etc/clash`.  In other words, the
+Graphene userspace sees the path as `/etc/clash`, whereas
+Graphene's kernel maps this name to the untrusted host's `/\x00/graphene/123456/fc05dcc` path.
+
+
+The executable `graphene-udsname` computes the mapping from path name to hashed
+name:
+
+```
+cd ~/src/fileserver/misc/graphene-udsname
+make
+./graphene-udsname /etc/clash
+decimal: 4228210124
+hex....: fc055dcc
 ```
 
 
@@ -264,14 +293,10 @@ and bd-vericrypt:
 ./nextfsserver.manifest.conf -b bdvericrtypt:/srv/fs.crypt.mt:macpassword:ROOTHASH:encpassword:aes-256-xts -Z /srv/root.crt /srv/proc.crt /srv/proc.key /etc/clash /srv/fs.crypt.img
 ```
 
+where `ROOTHASH` is the hexstring of the root hash for the Merkle tree.
+
 
 exitless
 --------
 Ensure that `~/src/fileserver/deploy/manifest.conf` has the line `THREADS 1
 exitless`, and otherwise repeat as for SGX.
-
-
-
-RPC Specification
-=================
-
