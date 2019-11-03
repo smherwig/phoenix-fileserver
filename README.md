@@ -20,7 +20,10 @@ is over the encrypted blocks.
 Building
 ========
 I will assume that sources are downloaded to `$HOME/src/` and that artifacts
-are installed under `$HOME`.  
+are installed under `$HOME`.  nextfs depends on
+[lwext4](https://github.com/gkostka/lwext4),
+[librho](https://github.com/smherwig/librho), and
+[libbd](https://github.com/smherwig/libbd).
 
 First download and install lwext4.  I have a
 [fork](https://github.com/smherwig/lwext4) of gkostka's lwext4 that adds
@@ -34,6 +37,14 @@ make -f Makefile.smherwig
 make -f Makefile.smherwig install INSTALL_TOP=$HOME
 ```
 
+Download, build, and install librho:
+
+```
+git clone https:/github.com/smherwig/librho
+cd librho/src
+make
+make instlal INSTALL_TOP=$HOME
+```
 
 Next, download, build, and install the block device library,
 [libbd](https://github.com/smherwig/phoenix-libbd):
