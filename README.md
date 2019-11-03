@@ -23,7 +23,7 @@ I will assume that sources are downloaded to `$HOME/src/` and that artifacts
 are installed under `$HOME`.  nextfs depends on
 [lwext4](https://github.com/gkostka/lwext4),
 [librho](https://github.com/smherwig/librho), and
-[libbd](https://github.com/smherwig/libbd).
+[libbd](https://github.com/smherwig/phoenix-libbd).
 
 First download and install lwext4.  I have a
 [fork](https://github.com/smherwig/lwext4) of gkostka's lwext4 that adds
