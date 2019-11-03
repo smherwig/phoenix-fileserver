@@ -20,45 +20,17 @@ is over the encrypted blocks.
 
 Building
 ========
-I will assume that sources are downloaded to `$HOME/src/` and that artifacts
-are installed under `$HOME`.  nextfs depends on
+nextfs depends on
 [lwext4](https://github.com/gkostka/lwext4),
 [librho](https://github.com/smherwig/librho), and
 [libbd](https://github.com/smherwig/phoenix-libbd).
-
-First download and install lwext4.  I have a
-[fork](https://github.com/smherwig/lwext4) of gkostka's lwext4 that adds
+I have a [fork](https://github.com/smherwig/lwext4) of gkostka's lwext4 that adds
 a `Makefile.smherwig` for the purpose of simplifying installation.
 
-```
-cd ~/src
-git clone https://github.com/smherwig/lwext4
-cd lwext4
-make -f Makefile.smherwig
-make -f Makefile.smherwig install INSTALL_TOP=$HOME
-```
+I assume that dependencies are installed under `$HOME`; modify nextfs's
+Makefile if this is not the case.
 
-Download, build, and install librho:
-
-```
-git clone https:/github.com/smherwig/librho
-cd librho/src
-make
-make instlal INSTALL_TOP=$HOME
-```
-
-Next, download, build, and install the block device library,
-[libbd](https://github.com/smherwig/phoenix-libbd):
-
-```
-cd ~/src
-git clone https://github.com/smherwig/phoenix-libbd libbd
-cd libbd
-make
-make install INSTALL_TOP=$HOME
-```
-
-Download and build nextfs:
+Next, download and build nextfs:
 
 ```
 cd ~/src
@@ -66,7 +38,6 @@ git clone https://github.com/smherwig/phoenix-fileserver fileserver
 cd fileserver/server
 make
 ```
-
 
 Creating a Filesystem Image
 ===========================
