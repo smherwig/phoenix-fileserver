@@ -172,18 +172,6 @@ mv manifest.sgx fio.manifest.sgx
 ```
 
 
-We test the nextfs server running outside of enclave, in an enclave, and in an
-enclave with exitless system calls.  Package nextfs to run in an enclave:
-
-```
-cp ~/src/fileserver/makefs/fs.std.img ~/src/fileserver/deploy/fs/srv
-cd ~/src/makemanifest
-./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p ~/src/fileserver/deploy/manifest.conf -t $PWD -v -o nextfsserver
-cd nextfsserver
-cp manifest.conf nextfsserver.manifest.conf
-```
-
-
 Next, create or copy over the keying material.  I will assume the keying
 material is from the
 [phoenix-nginx-eval](https://github.com/smherwig/phoenix-nginx-eval), but
@@ -207,6 +195,10 @@ cp fs.std.img ../deploy/fs/srv
 cp fs.crypt.img ../deploy/fs/srv
 cp fs.crypt.mt ../deploy/fs/srv
 ```
+
+We test the nextfs server using bd-std, bd-crypt, bd-vericrypt running outside of enclave, in an enclave, and in an
+enclave with exitless system calls.
+
 
 non-SGX
 -------
@@ -234,6 +226,7 @@ For bd-crypt, the nextfsserver command-line is:
 
 
 For bd-vericrypt, the nextfsserver command-line is:
+
 ```
 ./nextfsserver -b bdvericrypt:../deploy/fs/srv/fs.std.mt:ROOTHASH:encpassword:aes-256-xts -Z ../deploy/fs/srv/root.crt ../deploy/fs/srv/proc.crt ../deploy/fs/srv/proc.key -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.std.img
 ```
@@ -242,9 +235,40 @@ For bd-vericrypt, the nextfsserver command-line is:
 SGX
 ---
 
+Ensure that `~/src/fileserver/deploy/manifest.conf` has the line `THREADS 1`.
+Next, package nextfsserver to run in an enclave:
+
+```
+cd ~/src/makemanifest
+./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p ~/src/fileserver/deploy/manifest.conf -t $PWD -v -o nextfsserver
+cd nextfsserver
+cp manifest.conf nextfsserver.manifest.conf
+```
+
+To run the nextfsserver with bd-std, enter:
+
+```
+./nextfsserver.manifest.conf -b bdstd -Z /srv/root.crt /srv/proc.crt /srv/proc.key /etc/clash /srv/fs.std.img
+```
+
+The command-line for bd-crypt is:
+
+```
+./nextfsserver.manifest.conf -b bdcrypt:encpassword:aes-256-xts -Z /srv/root.crt /srv/proc.crt /srv/proc.key /etc/clash /srv/fs.crypt.img
+```
+
+and bd-vericrypt:
+
+
+```
+./nextfsserver.manifest.conf -b bdvericrtypt:/srv/fs.crypt.mt:macpassword:ROOTHASH:encpassword:aes-256-xts -Z /srv/root.crt /srv/proc.crt /srv/proc.key /etc/clash /srv/fs.crypt.img
+```
+
 
 exitless
 --------
+Ensure that `~/src/fileserver/deploy/manifest.conf` has the line `THREADS 1
+exitless`, and otherwise repeat as for SGX.
 
 
 
