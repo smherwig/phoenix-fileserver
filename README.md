@@ -129,6 +129,53 @@ jot down this hash, as it is passed as a command-line argument to the
 nextfsserver.
 
 
+Packaging
+=========
+
+Next, create or copy over the keying material.  I assume the keying
+material is from 
+[phoenix-nginx-eval](https://github.com/smherwig/phoenix-nginx-eval), but
+OpenSSL may also be used to create a root certificate (`root.crt`) and a leaf
+certificate and key (`proc.crt`, `proc.key`).
+
+```
+cd ~
+git clone https://github.com/smherwig/phoenix-nginx-eval nginx-eval
+cp ~/nginx-eval/config/root.crt ~/src/fileserver/deploy/fs/srv/
+cp ~/nginx-eval/config/proc.crt ~/src/fileserver/deploy/fs/srv/
+cp ~/nginx-eval/config/proc.key ~/src/fileserver/deploy/fs/srv/
+```
+
+Copy the filesystem images and Merkle tree files to `~src/fileserver/deploy/fs/srv/`
+
+```
+cd ~/src/fileserver/makefs
+cp fs.std.img ../deploy/fs/srv
+cp fs.crypt.img ../deploy/fs/srv
+cp fs.crypt.mt ../deploy/fs/srv
+```
+
+Note that `-a /graphene/123456/fc055dcc` signifies that the server listens on
+the abstract UNIX domain socket `\x00/graphene/123456/fc05dcc` (where abstract
+means that the socket path begins with a nul byte).  Internally, Graphene namespaces and
+hashes UNIX domain socket paths.  Here, `/graphene/123456` is a hardcoded
+namespace, and `fc055dcc` is the hash of `/etc/clash`.  In other words, the
+Graphene userspace sees the path as `/etc/clash`, whereas
+Graphene's kernel maps this name to the untrusted host's `/\x00/graphene/123456/fc05dcc` path.
+
+
+The executable `graphene-udsname` computes the mapping from path name to hashed
+name:
+
+```
+cd ~/src/fileserver/misc/graphene-udsname
+make
+./graphene-udsname /etc/clash
+decimal: 4228210124
+hex....: fc055dcc
+```
+
+
 Micro-Benchmarks
 ================
 
@@ -169,36 +216,12 @@ inspecting the return value of `nice`.
 
 Package fio to run in an enclave 
 
-
 ```
 cd ~/src/makemanifest
 ./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p
 ~/src/fileserver/bench/sgx/fio.conf -t $PWD -v -o fio
 cd fio
 mv manifest.sgx fio.manifest.sgx
-```
-
-Next, create or copy over the keying material.  I assume the keying
-material is from 
-[phoenix-nginx-eval](https://github.com/smherwig/phoenix-nginx-eval), but
-OpenSSL may also be used to create a root certificate (`root.crt`) and a leaf
-certificate and key (`proc.crt`, `proc.key`).
-
-```
-cd ~
-git clone https://github.com/smherwig/phoenix-nginx-eval nginx-eval
-cp ~/nginx-eval/config/root.crt ~/src/fileserver/deploy/fs/srv/
-cp ~/nginx-eval/config/proc.crt ~/src/fileserver/deploy/fs/srv/
-cp ~/nginx-eval/config/proc.key ~/src/fileserver/deploy/fs/srv/
-```
-
-Copy the filesystem images and Merkle tree files to `~src/fileserver/deploy/fs/srv/`
-
-```
-cd ~/src/fileserver/makefs
-cp fs.std.img ../deploy/fs/srv
-cp fs.crypt.img ../deploy/fs/srv
-cp fs.crypt.mt ../deploy/fs/srv
 ```
 
 We test the nextfsserver using bd-std, bd-crypt, bd-vericrypt running outside
@@ -239,26 +262,6 @@ For bd-vericrypt, the nextfsserver command-line is:
 
 where `ROOTHASH` is the hexstring of the root hash for the Merkle tree.
 
-
-Note that `-a /graphene/123456/fc055dcc` signifies that the server listens on
-the abstract UNIX domain socket `\x00/graphene/123456/fc05dcc' (where abstract
-means that the socket path begins with a nul byte).  Internally, Graphene namespaces and
-hashes UNIX domain socket paths.  Here, `/graphene/123456` is a hardcoded
-namespace, and `fc055dcc` is the hash of `/etc/clash`.  In other words, the
-Graphene userspace sees the path as `/etc/clash`, whereas
-Graphene's kernel maps this name to the untrusted host's `/\x00/graphene/123456/fc05dcc` path.
-
-
-The executable `graphene-udsname` computes the mapping from path name to hashed
-name:
-
-```
-cd ~/src/fileserver/misc/graphene-udsname
-make
-./graphene-udsname /etc/clash
-decimal: 4228210124
-hex....: fc055dcc
-```
 
 
 SGX
