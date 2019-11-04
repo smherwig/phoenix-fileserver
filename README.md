@@ -22,8 +22,9 @@ Building
 ========
 nextfs depends on
 [lwext4](https://github.com/gkostka/lwext4),
-[librho](https://github.com/smherwig/librho), and
-[libbd](https://github.com/smherwig/phoenix-libbd).
+[librho](https://github.com/smherwig/librho),
+[libbd](https://github.com/smherwig/phoenix-libbd), and
+[librpc](https://github.com/smherwig/phoenix-librpc).
 I have a [fork](https://github.com/smherwig/lwext4) of gkostka's lwext4 that adds
 a `Makefile.smherwig` for the purpose of simplifying installation.
 
@@ -137,8 +138,6 @@ Package nextffserver to run in an enclave:
 ```
 cd ~/src/makemanifest
 ./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p ~/src/fileserver/deploy/manifest.conf -t $PWD -v -o nextfsserver
-cd nextfsserver
-cp manifest.conf nextfsserver.manifest.conf
 ```
 
 The `~src/fileserver/deploy/manifest.conf` looks like:
@@ -241,8 +240,6 @@ Package fio to run in an enclave
 cd ~/src/makemanifest
 ./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p
 ~/src/fileserver/bench/sgx/fio.conf -t $PWD -v -o fio
-cd fio
-mv manifest.sgx fio.manifest.sgx
 ```
 
 We test the nextfsserver using bd-std, bd-crypt, bd-vericrypt running outside
