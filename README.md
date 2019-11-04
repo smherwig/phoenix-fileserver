@@ -18,8 +18,8 @@ internal node the HMAC of its two children.
 is over the encrypted blocks.
 
 
-Building
-========
+<a name="building"/> Building
+=============================
 nextfs depends on
 [lwext4](https://github.com/gkostka/lwext4),
 [librho](https://github.com/smherwig/librho),
@@ -40,8 +40,8 @@ cd fileserver/server
 make
 ```
 
-Creating a Filesystem Image
-===========================
+<a name="creating-a-filesystem-image"/> Creating a Filesystem Image
+===================================================================
 
 The script `src/fileserver/makefs/makefs.py` formats a file as an ext2 image
 with the contents of a directory.  Currently, the directory must be non-empty.
@@ -113,8 +113,8 @@ jot down this hash, as it is passed as a command-line argument to the
 nextfsserver.
 
 
-Packaging
-=========
+<a name="packaging"/> Packaging
+===============================
 
 Next, create or copy over the keying material.  I assume the keying
 material is from 
@@ -165,8 +165,8 @@ read-write onto Graphene's filesystem (e.g., the Graphene userspace sees a
 use exitless system calls.
 
 
-UNIX Domain Sockets
-===================
+<a name="unix-domain-sockets"/> UNIX Domain Sockets
+===================================================
 
 Internally, Graphene namespaces and hashes UNIX domain socket paths.   For
 instance, if a server in the Graphene userspace listens on the UNIX domain
@@ -196,8 +196,8 @@ hex....: fc055dcc
 ```
 
 
-Micro-Benchmarks
-================
+<a name="micro-benchmarks"/> Micro-Benchmarks
+=============================================
 
 We use [`fio`](https://github.com/axboe/fio) to measure the performance of
 sequential reads to a 16 MiB file hosted on a nextfsserver over 10 seconds;
@@ -322,8 +322,8 @@ exitless`, and otherwise repeat as for SGX.
 
 
 
-Limitations
-===========
+<a name="limitations"/> Limitations
+===================================
 
 A limitation when using a Merkle-tree enhanced block device (i.e., bd-verity or
 bd-vericrypt) is that the root hash will change during the execution,
