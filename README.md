@@ -14,7 +14,7 @@ is based on the block's ID
 - **bd-verity**: maintains a Merkle tree over the blocks for integrity
 protection: a leaf of the tree is an HMAC of the associated block, and an
 internal node the HMAC of its two children
-- **bd-vericrypt**: the composition of bd-verity with bd-crypt; the Merkle Tree
+- **bd-vericrypt**: the composition of bd-verity with bd-crypt; the Merkle tree
 is over the encrypted blocks
 
 
@@ -26,10 +26,10 @@ nextfs depends on
 [libbd](https://github.com/smherwig/phoenix-libbd), and
 [librpc](https://github.com/smherwig/phoenix-librpc).
 I have a [fork](https://github.com/smherwig/lwext4) of gkostka's lwext4 that adds
-a `Makefile.smherwig` for the purpose of simplifying installation.
+a `Makefile.smherwig` to simplify installation.
 
-I assume that dependencies are installed under `$HOME`; modify nextfs's
-Makefile if this is not the case.
+I assume dependencies are installed under `$HOME`; modify nextfs's Makefile if
+this is not the case.
 
 Next, download and build nextfs:
 
@@ -66,7 +66,8 @@ pip install cryptography
 bd-std image
 ------------
 
-To create a bd-std image, `fs.std.img`, from the contents of `root/`, enter:
+To create a 128 MiB bd-std image, `fs.std.img`, from the contents of `root/`,
+enter:
 
 ```
 cd ~/src/fileserver/makefs
@@ -76,8 +77,8 @@ cd ~/src/fileserver/makefs
 bd-crypt image
 --------------
 
-To create a bd-crypt image, `fs.crypt.img`, from the contents of `root/`,
-enter:
+To create a 128 MiB bd-crypt image, `fs.crypt.img`, from the contents of
+`root/`, enter:
 
 ```
 cd ~/src/fileserver/makefs
@@ -90,7 +91,7 @@ Here, `encpassword` is the password used to generate the encryption key.
 bd-verity and bd-vericrypt images
 ---------------------------------
 
-The script `src/fileserver/makefs/makemerkle.py` takes as an argument the
+The script `makefs/makemerkle.py` takes as an argument the
 filesystem image, computes the Merkle tree of the image, and outputs a
 serialized representation of the tree to a file.
 
@@ -111,7 +112,7 @@ bd-crypt filesystem image:
 ./makemerkle.py -k macpassword fs.crypt.img fs.crypt.mt
 ```
 
-The last line that `./makemerkle.py` outputs is a hexstring of the root hash;
+The last line that `makemerkle.py` outputs is a hexstring of the root hash;
 jot down this hash, as it is passed as a command-line argument to the
 nextfsserver.
 
@@ -119,54 +120,25 @@ nextfsserver.
 <a name="packaging"/> Packaging
 ===============================
 
-Next, create or copy over the keying material.  I assume the keying
-material is from 
-[phoenix-nginx-eval](https://github.com/smherwig/phoenix-nginx-eval), but
-OpenSSL may also be used to create a root certificate (`root.crt`) and a leaf
-certificate and key (`proc.crt`, `proc.key`).
+I assume that [phoenix](https://github.com/smherwig/phoenix#build) is built.
+
+Copy the keying material:
 
 ```
-cd ~
-git clone https://github.com/smherwig/phoenix-nginx-eval nginx-eval
-cp ~/nginx-eval/config/root.crt ~/src/fileserver/deploy/fs/srv/
-cp ~/nginx-eval/config/proc.crt ~/src/fileserver/deploy/fs/srv/
-cp ~/nginx-eval/config/proc.key ~/src/fileserver/deploy/fs/srv/
+cp ~/share/phoenix/root.crt ~/src/fileserver/deploy/fs/srv/
+cp ~/share/phoenix/proc.crt ~/src/fileserver/deploy/fs/srv/
+cp ~/share/phoenix/proc.key ~/src/fileserver/deploy/fs/srv/
 ```
 
 Copy the relevant filesystem image and Merkle tree file to
 `~src/fileserver/deploy/fs/srv/`.
 
-Package nextffserver to run in an enclave:
+Package nextfsserver to run in an enclave:
 
 ```
 cd ~/src/makemanifest
-./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p ~/src/fileserver/deploy/manifest.conf -t $PWD -v -o nextfsserver
+./make_sgx.py -g ~/src/phoenix -k ~/share/phoenix/enclave-key.pem -p ~/src/fileserver/deploy/manifest.conf -t $PWD -v -o nextfsserver
 ```
-
-The `~src/fileserver/deploy/manifest.conf` looks like:
-
-```
-EXEC file:/home/smherwig/phoenix/fileserver/server/nextfsserver
-
-MOUNT file:/home/smherwig/phoenix/fileserver/deploy/fs/srv /srv chroot rw
-MOUNT file:/home/smherwig/phoenix/fileserver/deploy/fs/etc /etc chroot rw
-
-ENCLAVE_SIZE 128
-
-THREADS 1
-#THREADS 1 exitless
-
-DEBUG off
-```
-
-The `EXEC` directive is the path to the nextffserver of the executable.  The
-`MOUNT` directives are chroot mounts; Graphene maps these hosts directories
-read-write onto Graphene's filesystem (e.g., the Graphene userspace sees a
-`/srv` directory which is really the untrusted host's
-`/home/smherwig/phoenix/fileserver/deploy/fs/srv` directory).
-`THREADS` indicates the maximum number SGX threads, and whether these threads
-use exitless system calls.
-
 
 <a name="unix-domain-sockets"/> UNIX Domain Sockets
 ===================================================
