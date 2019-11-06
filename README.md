@@ -66,8 +66,7 @@ pip install cryptography
 bd-std image
 ------------
 
-To create a bd-std image, `fs.std.img` from the contents of directory called
-`root/`, enter:
+To create a bd-std image, `fs.std.img`, from the contents of `root/`, enter:
 
 ```
 cd ~/src/fileserver/makefs
@@ -77,8 +76,8 @@ cd ~/src/fileserver/makefs
 bd-crypt image
 --------------
 
-To create a bd-crypt image, `fs.crypt.img` from the contents of directory
-called `root/`, enter:
+To create a bd-crypt image, `fs.crypt.img`, from the contents of `root/`,
+enter:
 
 ```
 cd ~/src/fileserver/makefs
