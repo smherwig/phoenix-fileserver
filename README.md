@@ -121,7 +121,7 @@ nextfsserver.
 ===============================
 
 I assume that [phoenix](https://github.com/smherwig/phoenix#building) is build
-and that [makemanifest](https://github.com/smherwig/phoenix-makemanfiest) is
+and that [makemanifest](https://github.com/smherwig/phoenix-makemanifest) is
 cloned to `~/src/makemanifest`:
 
 Copy the keying material:
