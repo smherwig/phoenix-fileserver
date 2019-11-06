@@ -120,7 +120,9 @@ nextfsserver.
 <a name="packaging"/> Packaging
 ===============================
 
-I assume that [phoenix](https://github.com/smherwig/phoenix#building) is built.
+I assume that [phoenix](https://github.com/smherwig/phoenix#building) is build
+and that [makemanifest](https://github.com/smherwig/phoenix-makemanfiest) is
+cloned to `~/src/makemanifest`:
 
 Copy the keying material:
 
