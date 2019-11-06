@@ -147,16 +147,16 @@ Internally, Graphene namespaces and hashes UNIX domain socket paths.   For
 instance, if a server in the Graphene userspace listens on the UNIX domain
 socket `/etc/clash`, the Graphene kernel and platform abstraction layer (PAL)
 translate this to a UNIX domain socket on the untrusted host named
-`/\x00/graphene/123456/fc05dcc`.  The leading `\x00` signifies that the path is
-abstract; `/graphene/123456/` is a hardcoded namespace, and `fc05dcc` is
-Graphene's custom hash of `/etc/clash`.
+`\x00/graphene/123456/fc05dcc`.  The leading `\x00` signifies that the path is
+abstract; `/graphene/123456/` is a hardcoded namespace, and `fc05dcc` (decimal
+`4228210124`) is Graphene's custom hash of `/etc/clash`.
 
 Admittedly, this can be confusing.  A rule of thumb is that when specifying a
-network host endpoint in `manifest.conf` with the `MOUNT` directive, use the
-decimal hash value (e.g, `4228210124`); when running a server outside of SGX,
-the server should liste on the full host path (e.g.,
-`\x00/graphene/123456/fc05dcc`);  when running a server inside
-of SGX, the server should liste on the Graphene userspace path (eg.,
+UNIX domain socket as a mount source in `manifest.conf`, use the decimal hash
+value (e.g, `pipe:4228210124`); when running a server outside of SGX, the
+server should listen on the full host path (e.g.,
+`\x00/graphene/123456/fc05dcc`);  when running a server inside of SGX,
+the server should listen on the Graphene userspace path (eg.,
 `/etc/clash`).
 
 The utility `graphene-udsname` computes the mapping from path name to hashed
