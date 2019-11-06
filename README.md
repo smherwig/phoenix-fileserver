@@ -10,12 +10,12 @@ this device:
 
 - **bd-std**: stores data blocks in plaintext, wihtout integrity guarantees
 - **bd-crypt**: encrypts each block using AES-256 in XTS mode; each block's IV
-is based on the block's ID.
+is based on the block's ID
 - **bd-verity**: maintains a Merkle tree over the blocks for integrity
 protection: a leaf of the tree is an HMAC of the associated block, and an
-internal node the HMAC of its two children.
+internal node the HMAC of its two children
 - **bd-vericrypt**: the composition of bd-verity with bd-crypt; the Merkle Tree
-is over the encrypted blocks.
+is over the encrypted blocks
 
 
 <a name="building"/> Building
@@ -66,6 +66,9 @@ pip install cryptography
 bd-std image
 ------------
 
+To create a bd-std image, `fs.std.img` from the contents of directory called
+`root/`, enter:
+
 ```
 cd ~/src/fileserver/makefs
 ./makefs.py -v -s 128M fs.std.img root
@@ -73,6 +76,9 @@ cd ~/src/fileserver/makefs
 
 bd-crypt image
 --------------
+
+To create a bd-crypt image, `fs.crypt.img` from the contents of directory
+called `root/`, enter:
 
 ```
 cd ~/src/fileserver/makefs
@@ -89,17 +95,15 @@ The script `src/fileserver/makefs/makemerkle.py` takes as an argument the
 filesystem image, computes the Merkle tree of the image, and outputs a
 serialized representation of the tree to a file.
 
-
-A bd-verity block device entails computing the merkle tree of a bd-std filesystem
-image:
+A bd-verity block device entails computing the merkle tree of a bd-std
+filesystem image:
 
 ```
 ./makemerkle.py -k macpassword fs.std.img fs.std.mt
 ```
 
 Here, `macpassword` is the key used for the Merkle tree's HMAC, and `fs.std.mt`
-the Merkle Tree output file.
-
+the Merkle tree output file.
 
 Similarly, a bd-vericrypt block device entails computing the Merkle tree of a
 bd-crypt filesystem image:
