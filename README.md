@@ -120,7 +120,7 @@ nextfsserver.
 <a name="packaging"/> Packaging
 ===============================
 
-I assume that [phoenix](https://github.com/smherwig/phoenix#build) is built.
+I assume that [phoenix](https://github.com/smherwig/phoenix#building) is built.
 
 Copy the keying material:
 
