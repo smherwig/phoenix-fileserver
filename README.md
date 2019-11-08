@@ -287,7 +287,7 @@ For bd-vericrypt, the nextfsserver command-line is:
 
 where `ROOTHASH` is the hexstring of the root hash for the Merkle tree.  
 
-As described in (limitations)[#limitations), filesystem images that have an
+As described in [limitations](#limitations), filesystem images that have an
 associated Merkle tree must be re-copied between subsequent tests.  For
 instance, if running the bd-vericrypt test twice in a row, then the original
 `fs.std.img` and `fs.std.mt` must be re-copied to the `deploy/fs/srv` between
