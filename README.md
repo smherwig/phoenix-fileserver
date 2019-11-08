@@ -120,7 +120,7 @@ nextfsserver.
 <a name="packaging"/> Packaging
 ===============================
 
-I assume that [phoenix](https://github.com/smherwig/phoenix#building) is build
+I assume that [phoenix](https://github.com/smherwig/phoenix#building) is built
 and that [makemanifest](https://github.com/smherwig/phoenix-makemanifest) is
 cloned to `~/src/makemanifest`:
 
@@ -190,8 +190,12 @@ instructions here assume that the phoenix source is located at
 `$HOME/src/phoenix` and the phoenix-makemanifest project at
 `$HOME/src/makemanifest`.
 
-Build and install the [fio](https://github.com/axboe/fio) I/O workload
-benchmarking tool.  
+We apply a small patch to `fio` that removes a call to `nice(3)`.  `nice(3)` is
+a C library wrapper for the system call `setpriority`, which Graphene does not
+implement (that is, Graphene will return `ENOSYS`).  If we do not apply this
+patch, `fio` will abort upon inspecting the return value of `nice`.
+
+Patch, build, and install `fio`:
 
 ```
 cd ~/src
@@ -199,29 +203,23 @@ git clone https://github.com/axboe/fio
 cd fio
 git checkout 2f75f0223
 patch -p1 --dry-run < ~/src/fileserver/bench/fio-patch/fio-3.13.patch
-patch -p1 < ~/src/fileserver/bnech/fio-patch/fio-3.13.patch
+patch -p1 < ~/src/fileserver/bench/fio-patch/fio-3.13.patch
 ./configure --prefix=$HOME
 make
 make install
 ```
 
-We apply a small patch to `fio` that removes a call to
-`nice(3)`.  `nice(3)` is a C library wrapper for the system call
-`setpriority`, which Graphene does not implement (that is, Graphene will return
-`ENOSYS`).  If we do not apply this patch, `fio` will abort upon
-inspecting the return value of `nice`.
-
 Package fio to run in an enclave 
 
 ```
 cd ~/src/makemanifest
-./make_sgx.py -g ~/src/phoenix -k enclave-key.pem -p
-~/src/fileserver/bench/sgx/fio.conf -t $PWD -v -o fio
+./make_sgx.py -g ~/src/phoenix -k ~/share/phoenix/enclave-key.pem \
+        -p ~/src/fileserver/bench/sgx/fio.conf -t $PWD -v -o fio
 ```
 
 We test the nextfsserver using bd-std, bd-crypt, bd-vericrypt running outside
-of enclave (*non-SGX*), in an enclave (*SGX*), and in an enclave with exitless
-system calls (*exitless*)
+of an enclave (*non-SGX*), in an enclave (*SGX*), and in an enclave with
+exitless system calls (*exitless*).
 
 
 non-SGX
