@@ -220,7 +220,10 @@ cd ~/src/makemanifest
 
 We test the nextfsserver using bd-std, bd-crypt, bd-vericrypt running outside
 of an enclave (*non-SGX*), in an enclave (*SGX*), and in an enclave with
-exitless system calls (*exitless*).  
+exitless system calls (*exitless*).  I assume that keying material is copied to
+as described in [packaging](#packaging) and that `fs.std.img`, `fs.crypt.img`
+and `fs.std.mt` images and merkle trees haved been created as described in
+[creating a fileystem image](#creating-a-filesystem-image).
 
 
 non-SGX
@@ -263,7 +266,7 @@ operations, e.g.:
 ```
 
 Here, `9986` is the time when fio wrote the log entry (milliseconds since the
-start of test), `329000` is the latency (nanoseconds) for the I/O
+start of test); `329000` is the latency (nanoseconds) for the I/O
 operation; `0` indicates that the I/O operation is a read; and `4096` indicates
 the number of bytes read (the block size).  For our tests, only the second
 column is useful.
