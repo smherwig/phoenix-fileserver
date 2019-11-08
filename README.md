@@ -176,11 +176,10 @@ hex....: fc055dcc
 <a name="micro-benchmarks"/> Micro-Benchmarks
 =============================================
 
-We use [`fio`](https://github.com/axboe/fio) to measure the performance of
+We use [fio](https://github.com/axboe/fio) to measure the performance of
 sequential reads to a 16 MiB file hosted on a nextfsserver over 10 seconds;
-each read transfers 4096 bytes of data.  `fio` runs inside an enclave, uses
+each read transfers 4096 bytes of data.  fio runs inside an enclave, uses
 exitless system calls, and invokes read operations from a single thread.  
-
 
 The micro-benchmarks require the [phoenix](https://github.com/smherwig/phoenix)
 libOS and
@@ -190,12 +189,12 @@ instructions here assume that the phoenix source is located at
 `$HOME/src/phoenix` and the phoenix-makemanifest project at
 `$HOME/src/makemanifest`.
 
-We apply a small patch to `fio` that removes a call to `nice(3)`.  `nice(3)` is
+We apply a small patch to fio that removes a call to `nice(3)`.  `nice(3)` is
 a C library wrapper for the system call `setpriority`, which Graphene does not
 implement (that is, Graphene will return `ENOSYS`).  If we do not apply this
-patch, `fio` will abort upon inspecting the return value of `nice`.
+patch, fio will abort upon inspecting the return value of `nice`.
 
-Patch, build, and install `fio`:
+Patch, build, and install fio:
 
 ```
 cd ~/src
@@ -204,12 +203,14 @@ cd fio
 git checkout 2f75f0223
 patch -p1 --dry-run < ~/src/fileserver/bench/fio-patch/fio-3.13.patch
 patch -p1 < ~/src/fileserver/bench/fio-patch/fio-3.13.patch
-./configure --prefix=$HOME
+./configure --prefix=$HOME --disable-numa --disable-rados --disable-rbd \
+        --disable-http --disable-gfapi --disable-lex --disable-pmem \
+        --disable-shm
 make
 make install
 ```
 
-Package fio to run in an enclave 
+Package fio to run in an enclave:
 
 ```
 cd ~/src/makemanifest
@@ -219,7 +220,7 @@ cd ~/src/makemanifest
 
 We test the nextfsserver using bd-std, bd-crypt, bd-vericrypt running outside
 of an enclave (*non-SGX*), in an enclave (*SGX*), and in an enclave with
-exitless system calls (*exitless*).
+exitless system calls (*exitless*).  
 
 
 non-SGX
@@ -235,7 +236,7 @@ cd ~/src/fileserver/server
 Note that `-a /graphene/123456/fc055dcc` signifies that the server listens on
 the abstract UNIX domain socket `\x00/graphene/123456/fc05dcc`.
 
-In another terminal, run the `fio` tool:
+In another terminal, run fio:
 
 ```
 cd ~/src/makemanifest/fio
@@ -243,12 +244,36 @@ cd ~/src/makemanifest/fio
 /results/graphene-bdstd.out
 ```
 
+fio writes the results to `~/src/fileserver/bench/sgx/root/results`:
+
+```
+cd ~/src/fileserver/bench/sgx/root/results
+ls
+graphene-bdstd.out         lat-seqread-n1_lat.1.log   README
+lat-seqread-n1_clat.1.log  lat-seqread-n1_slat.1.log
+```
+
+The file `graphene-bdstd.out` contains high-level stats for bandwidth and IOPS
+(I/O operations (here, reads) per second).  The file
+`lat-seqread-n1_clat.1.log` has a log line with the latency of each read
+operations, e.g.:
+
+```
+9986, 329000, 0, 4096
+```
+
+Here, `9986` is the time when fio wrote the log entry (milliseconds since the
+start of test), `329000` is the latency (nanoseconds) for the I/O
+operation; `0` indicates that the I/O operation is a read; and `4096` indicates
+the number of bytes read (the block size).  For our tests, only the second
+column is useful.
+
+
 For bd-crypt, the nextfsserver command-line is:
 
 ```
 ./nextfsserver -b bdcrypt:encpassword:aes-256-xts -Z ../deploy/fs/srv/root.crt ../deploy/fs/srv/proc.crt ../deploy/fs/srv/proc.key -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.std.img
-```
-
+``` 
 
 For bd-vericrypt, the nextfsserver command-line is:
 
@@ -281,7 +306,6 @@ The command-line for bd-crypt is:
 ```
 
 and bd-vericrypt:
-
 
 ```
 ./nextfsserver.manifest.conf -b bdvericrtypt:/srv/fs.crypt.mt:macpassword:ROOTHASH:encpassword:aes-256-xts -Z /srv/root.crt /srv/proc.crt /srv/proc.key /etc/clash /srv/fs.crypt.img
