@@ -95,7 +95,7 @@ The script `makefs/makemerkle.py` takes as an argument the
 filesystem image, computes the Merkle tree of the image, and outputs a
 serialized representation of the tree to a file.
 
-A bd-verity block device entails computing the merkle tree of a bd-std
+A bd-verity block device entails computing the Merkle tree of a bd-std
 filesystem image:
 
 ```
@@ -220,16 +220,17 @@ cd ~/src/makemanifest
 
 We test the nextfsserver using bd-std, bd-crypt, bd-vericrypt running outside
 of an enclave (*non-SGX*), in an enclave (*SGX*), and in an enclave with
-exitless system calls (*exitless*).  I assume that keying material is copied to
-as described in [packaging](#packaging) and that `fs.std.img`, `fs.crypt.img`
-and `fs.std.mt` images and merkle trees haved been created as described in
-[creating a fileystem image](#creating-a-filesystem-image).
+exitless system calls (*exitless*).  I assume that keying material has been
+copied as described in [packaging](#packaging) and that `fs.std.img`,
+`fs.crypt.img` and `fs.std.mt` images and Merkle trees haved been
+created as described in [creating a fileystem
+image](#creating-a-filesystem-image).
 
 
 non-SGX
 -------
 
-In one terminal, run the nextfsserver:
+In one terminal, run the nextfsserver outside of an enclave:
 
 ```
 cd ~/src/fileserver/server
@@ -239,7 +240,7 @@ cd ~/src/fileserver/server
 Note that `-a /graphene/123456/fc055dcc` signifies that the server listens on
 the abstract UNIX domain socket `\x00/graphene/123456/fc05dcc`.
 
-In another terminal, run fio:
+In another terminal, run fio in an enclave:
 
 ```
 cd ~/src/makemanifest/fio
@@ -284,8 +285,19 @@ For bd-vericrypt, the nextfsserver command-line is:
 ./nextfsserver -b bdvericrypt:../deploy/fs/srv/fs.std.mt:ROOTHASH:encpassword:aes-256-xts -Z ../deploy/fs/srv/root.crt ../deploy/fs/srv/proc.crt ../deploy/fs/srv/proc.key -a /graphene/123456/fc055dcc ../deploy/fs/srv/fs.std.img
 ```
 
-where `ROOTHASH` is the hexstring of the root hash for the Merkle tree.
+where `ROOTHASH` is the hexstring of the root hash for the Merkle tree.  
 
+As described in (limitations)[#limitations), filesystem images that have an
+associated Merkle tree must be re-copied between subsequent tests.  For
+instance, if running the bd-vericrypt test twice in a row, then the original
+`fs.std.img` and `fs.std.mt` must be re-copied to the `deploy/fs/srv` between
+runs:
+
+```
+cd `~/src/fileserver/makefs
+cp fs.std.img ../deploy/fs/srv/fs.std.img
+cp fs.std.mt ../deploy/fs/srv/fs.std.mt
+```
 
 
 SGX
