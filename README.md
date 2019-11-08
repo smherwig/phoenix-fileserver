@@ -323,7 +323,7 @@ The command-line for bd-crypt is:
 and bd-vericrypt:
 
 ```
-./nextfsserver.manifest.conf -b bdvericrtypt:/srv/fs.crypt.mt:macpassword:ROOTHASH:encpassword:aes-256-xts -Z /srv/root.crt /srv/proc.crt /srv/proc.key /etc/clash /srv/fs.crypt.img
+./nextfsserver.manifest.conf -b bdvericrypt:/srv/fs.crypt.mt:macpassword:ROOTHASH:encpassword:aes-256-xts -Z /srv/root.crt /srv/proc.crt /srv/proc.key /etc/clash /srv/fs.crypt.img
 ```
 
 where `ROOTHASH` is the hexstring of the root hash for the Merkle tree.
